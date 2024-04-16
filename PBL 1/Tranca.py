@@ -1,41 +1,92 @@
-import socket
+import socket 
+import threading 
 
-TCP_HOST = 'localhost'
-TCP_PORT = 12345
+SERVER_IP = '127.0.0.1'
+SERVER_PORT_TCP = 12345
+SERVER_PORT_UDP = 54321
+HEADERSIZE = 10
 
-UDP_HOST = 'localhost'
-UDP_PORT = 54321
+Tranca = {'Estado': 'Desligada', 
+          'Trava': 'Destrancada'}
 
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcp_socket.connect((TCP_HOST, TCP_PORT))
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-estado_porta = 'Destrancada'  # Inicialmente a porta está destrancada
+#Funcao resposável por conectar a tranca ao servidor via TCP
+def try_connect_broker_tcp(server_ip, server_port_tcp): 
+    try: 
+        #Tenta conectar ao servidor 
+        tcp_socket.connect((SERVER_IP, SERVER_PORT_TCP)) 
+        print("Sucesso ao conectar")
+    except socket.error as e:
+        print(f"Falha ao conectar ao servidor via TCP: {e}")  
 
-def send_message_udp(message):
-    udp_socket.sendto(message.encode(), (UDP_HOST, UDP_PORT))
+#Funcao responsavel por enviar uma mensagem via udp
+def send_message_udp(mensagem, server_ip, server_port_udp): 
+    try: 
+        #Tenta enviar mensagem ao servidor via UDP
+        udp_socket.sendto(mensagem.encode(), (server_ip, server_port_udp)) 
+        print("Sucesso ao enviar mensagem via UDP")
+    except socket.error as e:
+        print(f"Falha ao enviar mensagem via UDP: {e}")
 
-def set_estado_porta(novo_estado):
-    global estado_porta
-    estado_porta = novo_estado
-    print("Estado atual da porta:", estado_porta)
+#Função responsavél por receber mensagens do servidor
+def try_get_message(): 
+    try: 
+        mensagem_completa = ''
+        nova_msg = True
+        while True:
+            mensagem = tcp_socket.recv(1024)
+            if nova_msg: 
+                print(f"tamanho da mensagem: { mensagem[:HEADERSIZE]}")
+                tamanho_msg = int(mensagem[:HEADERSIZE])
+                nova_msg = False 
 
-while True:
-    command = input("Enter command (Trancar, Destrancar, Estado): ")
-    tcp_socket.sendall(command.encode())
+            mensagem_completa += mensagem.decode('utf-8') 
+            print(f"Mensagem recebida: {mensagem_completa}")  
+
+            if len(mensagem_completa)-HEADERSIZE == tamanho_msg: 
+                print("Recebimento da mensagem completa")
+                print(tamanho_msg) 
+    except Exception as e: 
+        print(f"Falha ao receber mensagem: {e}")
+    finally:
+        # Fecha o socket ao finalizar a thread
+        tcp_socket.close()
+
+
+
+def main():
+    #Conexão da Tranca com o broker 
+    try_connect_broker_tcp(SERVER_IP, SERVER_PORT_TCP) 
+
+    # Cria e inicia a thread para recebimento de mensagens
+    receive_thread = threading.Thread(target=try_get_message, args=())
+    receive_thread.start()
+
+    # Aguarda a thread de recebimento de mensagens terminar
+    receive_thread.join() 
+
+    # Exemplo de envio de mensagem via UDP
+    mensagem_udp = "Mensagem que enviei via UDP"
+    send_message_udp(mensagem_udp, SERVER_IP, SERVER_PORT_UDP) 
+
+    while True:
+        try:
+            # Alguma lógica adicional pode ser colocada aqui
+            pass
+        except KeyboardInterrupt:
+            print("Encerrando o programa...")
+            # Ao detectar um sinal de interrupção (Ctrl+C), encerra as threads e fecha o socket
+            receive_thread.join()
+            tcp_socket.close()
+            udp_socket.close()
+            break
     
-    data = tcp_socket.recv(1024).decode()
-    print("Received from broker:", data)
-    
-    if command == 'Trancar':
-        set_estado_porta('Trancada')
-        send_message_udp("Porta trancada")
-        print("Trancou")
-    elif command == 'Destrancar':
-        set_estado_porta('Destrancada')
-        send_message_udp("Porta destrancada")
-        print("Destrancou")
-    elif command == 'Estado':
-        print("Enviando estado atual da porta para o broker:", estado_porta)
-        tcp_socket.sendall(estado_porta.encode())
+
+
+if __name__ == "__main__":
+    main()
+
+
