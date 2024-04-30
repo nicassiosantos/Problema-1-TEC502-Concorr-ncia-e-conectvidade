@@ -8,107 +8,173 @@ SERVER_PORT_TCP = 12345
 SERVER_PORT_UDP = 54321
 HEADERSIZE = 10
 
-Tranca = {'Estado': 'Fechada', 
-          'Trava': 'Destrancada', 
-          'TempoAberta': '0', 
-          }
-
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+Porta = {'Estado': 'fechada', 
+          'Trava': 'destrancada', 
+          'TempoAberta': 0, 
+          }
+  
+
 #Funcao resposável por conectar a tranca ao servidor via TCP
-def try_connect_broker_tcp(server_ip, server_port_tcp): 
-    try: 
-        #Tenta conectar ao servidor 
-        tcp_socket.connect((SERVER_IP, SERVER_PORT_TCP)) 
-        print("Sucesso ao conectar")
-    except socket.error as e:
-        print(f"Falha ao conectar ao servidor via TCP: {e}")  
+def tente_conectar_broker_tcp(server_ip, server_port_tcp): 
+    while True:
+        try: 
+            #Tenta conectar ao servidor 
+            global tcp_socket
+            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp_socket.connect((server_ip, server_port_tcp)) 
+            print("Sucesso ao conectar") 
+            break
+        except socket.error as e:
+            if hasattr(e, 'winerror') and e.winerror == 10061:
+                print("O Servidor ainda não está no ar")
+                time.sleep(3)
+                print("Tentando Reconexão...")
+            else:
+                print(f"Falha ao conectar ao servidor via TCP: {e}")  
 
 #Funcao responsavel por enviar uma mensagem via udp
-def send_message_udp(mensagem, server_ip, server_port_udp): 
+def envio_mensagem_udp(mensagem, server_ip, server_port_udp): 
     try: 
         #Tenta enviar mensagem ao servidor via UDP
         udp_socket.sendto(mensagem.encode(), (server_ip, server_port_udp)) 
-        print("Sucesso ao enviar mensagem via UDP")
     except socket.error as e:
-        print(f"Falha ao enviar mensagem via UDP: {e}")
+        print(f"Falha ao enviar mensagem via UDP: {e}") 
 
 #Função responsavél por receber mensagens do servidor
-def handling_message_tcp(): 
-    try: 
-        mensagem_completa = ''
-        nova_msg = True
-        
-        mensagem = tcp_socket.recv(1024)
-        if nova_msg: 
-            print(f"tamanho da mensagem: { mensagem[:HEADERSIZE]}")
-            tamanho_msg = int(mensagem[:HEADERSIZE])
-            nova_msg = False 
-
-        mensagem_completa += mensagem.decode('utf-8') 
-        print(f"Mensagem recebida: {mensagem_completa}")  
-
-        if len(mensagem_completa)-HEADERSIZE == tamanho_msg: 
-            print("Recebimento da mensagem completa")
-            print(tamanho_msg)  
-
-        mensagem_completa = mensagem_completa[10:] 
-        print(f"Mensagem cortada >{mensagem_completa}<") 
-
-    except Exception as e: 
-        print(f"Falha ao receber mensagem: {e}")
-    finally:
-        # Fecha o socket ao finalizar a thread
-        tcp_socket.close()
-
-
-#Função responsavél por 
-
-
-#Função responsavél por aleatorizar o estado da porta 
-def door_randomization(): 
-    print()
-
-    #Gera um intervalo em 
-
-#Função responssavél por tratar mensagens que chegam a Tranca e mandar uma resposta de acordo 
-def messsage_receiver(mensagem): 
-
-    if mensagem == "0": 
-        if Tranca['Estado'] == "Fechada": 
-            Tranca['Trava'] = "Trancada"
-
-
-
-
-def main():
-    #Conexão da Tranca com o broker 
-    try_connect_broker_tcp(SERVER_IP, SERVER_PORT_TCP) 
-
-    # Cria e inicia a thread para recebimento de mensagens
-    receive_thread = threading.Thread(target=handling_message_tcp, args=())
-    receive_thread.start()
-
-    # Aguarda a thread de recebimento de mensagens terminar
-    receive_thread.join() 
-
-    # Exemplo de envio de mensagem via UDP
-    mensagem_udp = "Mensagem que enviei via UDP"
-    send_message_udp(mensagem_udp, SERVER_IP, SERVER_PORT_UDP) 
-
+def tratando_mensagens_tcp(): 
     while True:
         try:
-            # Alguma lógica adicional pode ser colocada aqui
-            pass
-        except KeyboardInterrupt:
-            print("Encerrando o programa...")
-            # Ao detectar um sinal de interrupção (Ctrl+C), encerra as threads e fecha o socket
-            receive_thread.join()
-            tcp_socket.close()
-            udp_socket.close()
-            break
+            mensagem = tcp_socket.recv(1024).decode('utf-8')
+            if not mensagem:
+                break
+            print(f"Mensagem TCP recebida: {mensagem}")
+            partes = mensagem.split('-')
+            if partes[0] == "comando": 
+                tcp_socket.send(bytes("Comando Recebido","utf-8"))
+            receptor_mensagens(partes)
+        except ConnectionResetError:
+            print("A conexão com o servidor foi redefinida pelo servidor. Aguarde o servidor estar no ar novamente") 
+            tente_conectar_broker_tcp(SERVER_IP, SERVER_PORT_TCP)
+        except Exception as e:
+            print(f"Erro ao processar mensagem TCP: {e}")
+            time.sleep(3) 
+
+
+# Função para simular a abertura e fechamento da porta
+def simular_porta():
+    def simular():
+        while True:
+            print(f"Estado Trava: {Porta['Trava']}")
+            if Porta['Trava'] == 'destrancada': 
+                Porta['Estado'] = random.choice(["aberta", "fechada"])
+            print(f"A porta está {Porta['Estado']}.")
+            print(f"Tempo aberta: {Porta['TempoAberta']}")
+            time.sleep(random.uniform(4, 8))  # Tempo aleatório antes de alterar o estado da porta
+    thread = threading.Thread(target=simular)
+    thread.start() 
+
+
+#Função responsavél por aleatorizar o estado da porta em que momento ela abre 
+def observar_porta():
+    def monitorar():
+        inicio_contagem = 0
+        while True:
+            if Porta['Estado'] == 'fechada':
+                Porta['TempoAberta'] = 0 
+                # Espera até que a porta seja aberta
+                while Porta['Estado'] == "fechada":
+                    time.sleep(1)  # Verifica a cada segundo
+                inicio_contagem = time.time()  # Inicia a contagem de tempo
+            elif Porta['Estado'] == "aberta":
+                if inicio_contagem == 0:
+                    inicio_contagem = time.time()  # Inicia a contagem de tempo
+                Porta['TempoAberta'] = time.time() - inicio_contagem
+                # Espera até que a porta seja fechada
+                while Porta['Estado'] == "aberta":
+                    Porta['TempoAberta'] = time.time() - inicio_contagem
+                    time.sleep(1)  # Verifica a cada segundo 
+                inicio_contagem = 0
+    thread = threading.Thread(target=monitorar)
+    thread.start()
+
+#Função responsavél por tratar mensagens que chegam a Tranca e mandar uma resposta de acordo 
+def receptor_mensagens(partes): 
+    tipo_mensagem = partes[0]
+
+    if tipo_mensagem == 'comando':
+        comando = partes[1]
+        if comando == 'trancar':
+            if Porta['Estado'] == "fechada": 
+                Porta['Trava'] = "trancada"
+        elif comando == 'destrancar':
+            if Porta['Trava'] == 'trancada': 
+                Porta['Trava'] = "destrancada"
+
+def receptor_mensagens_menu(mensagem): 
+    if mensagem == '0':
+        if Porta['Estado'] == "fechada": 
+            Porta['Trava'] = "trancada"
+    elif mensagem == '1':
+        if Porta['Trava'] == 'trancada': 
+            Porta['Trava'] = "destrancada"
+    
+#Função para controle manual da tranca
+def menu_tranca(): 
+    opcao = ""
+    while opcao != "0" and opcao != "1":
+        print("====Tranca Smart!=====")
+        print("[0] Trancar")
+        print("[1] Destrancar")
+        print("")
+        opcao = input("Escolha sua opção: ")  
+        if opcao != "0" and opcao != "1": 
+            print("")
+            print("Opção inválida por favor insira noavamente ") 
+            print("")
+            time.sleep(1)
+    receptor_mensagens_menu(opcao)
+
+#Função que vai enviar informações do dispositivo para o broker 
+def envio_informações():
+    def enviar(): 
+        while True:
+            estado = Porta["Estado"]
+            trava = Porta["Trava"]
+            tempo_aberta = Porta["TempoAberta"]
+            mensagem = f"status-{estado}-{trava}-{tempo_aberta:.2f}-"
+            envio_mensagem_udp(mensagem, SERVER_IP, SERVER_PORT_UDP)
+            time.sleep(2)  
+    thread = threading.Thread(target=enviar)
+    thread.start() 
+
+def main():
+    try:
+        # Conexão da Tranca com o broker
+        tente_conectar_broker_tcp(SERVER_IP, SERVER_PORT_TCP)
+
+        # Cria e inicia a thread para recebimento de mensagens
+        receive_thread = threading.Thread(target=tratando_mensagens_tcp, args=())
+        receive_thread.start()
+
+        observar_porta()
+        simular_porta()
+        envio_informações()
+
+        while True:
+            try:
+                menu_tranca()
+                pass
+            except KeyboardInterrupt:
+                print("Encerrando o programa...")
+                # Ao detectar um sinal de interrupção (Ctrl+C), encerra as threads e fecha o socket
+                tcp_socket.close()
+                udp_socket.close()
+                break
+
+    except Exception as e:
+        print(f"Erro durante a execução do programa: {e}")
     
 
 

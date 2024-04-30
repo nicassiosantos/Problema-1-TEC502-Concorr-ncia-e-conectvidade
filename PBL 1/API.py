@@ -1,28 +1,40 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import socket
+import threading
 
-# Endereço IP e porta do servidor
+app = FastAPI()
+
 SERVER_IP = '127.0.0.1'
-SERVER_PORT = 12345
+SERVER_PORT_TCP = 12345
 
-# Mensagem a ser enviada para o servidor
-MESSAGE = "Olá, servidor!"
+# Modelo para os dados da requisição
+class Command(BaseModel):
+    command: str
 
-# Função para enviar a mensagem para o servidor
-def send_message_to_server():
+# Função para enviar mensagem TCP para o servidor
+async def send_tcp_message(message):
     try:
-        # Cria o socket TCP
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-            # Conecta ao servidor
-            client_socket.connect((SERVER_IP, SERVER_PORT))
-            # Envia a mensagem
-            client_socket.sendall(MESSAGE.encode())
-            print("Mensagem enviada com sucesso para o servidor.")
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_socket.connect((SERVER_IP, SERVER_PORT_TCP))
+        tcp_socket.sendall(message.encode())
+        response = tcp_socket.recv(1024)
+        tcp_socket.close()
+        return response.decode()
     except Exception as e:
-        print("Erro ao enviar mensagem para o servidor:", e)
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar mensagem TCP: {e}")
 
-# Função principal
-def main():
-    send_message_to_server()
+# Rota para enviar comando ao servidor
+@app.post("/send-command/")
+async def send_command(command: Command):
+    response = await send_tcp_message(command.command)
+    return {"success": True, "response": response}
+
+def run_api():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
-    main()
+    # Roda a API em uma thread separada para que continue executando
+    api_thread = threading.Thread(target=run_api)
+    api_thread.start()
