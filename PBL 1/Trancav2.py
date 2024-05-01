@@ -8,11 +8,14 @@ SERVER_PORT_TCP = 12345
 SERVER_PORT_UDP = 54321
 HEADERSIZE = 10
 
+ligar = False 
+
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 Porta = {'Estado': 'fechada', 
           'Trava': 'destrancada', 
-          'TempoAberta': 0, 
+          'TempoAberta': 0,
+          'Ligar': 'false' 
           }
   
 
@@ -51,8 +54,6 @@ def tratando_mensagens_tcp():
                 break
             print(f"Mensagem TCP recebida: {mensagem}")
             partes = mensagem.split('-')
-            if partes[0] == "comando": 
-                tcp_socket.send(bytes("Comando Recebido","utf-8"))
             receptor_mensagens(partes)
         except ConnectionResetError:
             print("A conexão com o servidor foi redefinida pelo servidor. Aguarde o servidor estar no ar novamente") 
@@ -62,16 +63,18 @@ def tratando_mensagens_tcp():
             time.sleep(3) 
 
 
+
 # Função para simular a abertura e fechamento da porta
 def simular_porta():
     def simular():
         while True:
-            print(f"Estado Trava: {Porta['Trava']}")
-            if Porta['Trava'] == 'destrancada': 
-                Porta['Estado'] = random.choice(["aberta", "fechada"])
-            print(f"A porta está {Porta['Estado']}.")
-            print(f"Tempo aberta: {Porta['TempoAberta']}")
-            time.sleep(random.uniform(4, 8))  # Tempo aleatório antes de alterar o estado da porta
+            if Porta['Ligar'] == 'true':
+                print(f"Estado Trava: {Porta['Trava']}")
+                if Porta['Trava'] == 'destrancada': 
+                    Porta['Estado'] = random.choice(["aberta", "fechada"])
+                print(f"A porta está {Porta['Estado']}.")
+                print(f"Tempo aberta: {Porta['TempoAberta']}")
+                time.sleep(random.uniform(4, 8))  # Tempo aleatório antes de alterar o estado da porta
     thread = threading.Thread(target=simular)
     thread.start() 
 
@@ -81,36 +84,54 @@ def observar_porta():
     def monitorar():
         inicio_contagem = 0
         while True:
-            if Porta['Estado'] == 'fechada':
-                Porta['TempoAberta'] = 0 
-                # Espera até que a porta seja aberta
-                while Porta['Estado'] == "fechada":
-                    time.sleep(1)  # Verifica a cada segundo
-                inicio_contagem = time.time()  # Inicia a contagem de tempo
-            elif Porta['Estado'] == "aberta":
-                if inicio_contagem == 0:
+            if Porta['Ligar'] == 'true':
+                if Porta['Estado'] == 'fechada':
+                    Porta['TempoAberta'] = 0 
+                    # Espera até que a porta seja aberta
+                    while Porta['Estado'] == "fechada":
+                        time.sleep(1)  # Verifica a cada segundo
                     inicio_contagem = time.time()  # Inicia a contagem de tempo
-                Porta['TempoAberta'] = time.time() - inicio_contagem
-                # Espera até que a porta seja fechada
-                while Porta['Estado'] == "aberta":
+                elif Porta['Estado'] == "aberta":
+                    if inicio_contagem == 0:
+                        inicio_contagem = time.time()  # Inicia a contagem de tempo
                     Porta['TempoAberta'] = time.time() - inicio_contagem
-                    time.sleep(1)  # Verifica a cada segundo 
-                inicio_contagem = 0
+                    # Espera até que a porta seja fechada
+                    while Porta['Estado'] == "aberta":
+                        Porta['TempoAberta'] = time.time() - inicio_contagem
+                        time.sleep(1)  # Verifica a cada segundo 
+                    inicio_contagem = 0
     thread = threading.Thread(target=monitorar)
     thread.start()
 
 #Função responsavél por tratar mensagens que chegam a Tranca e mandar uma resposta de acordo 
 def receptor_mensagens(partes): 
     tipo_mensagem = partes[0]
-
     if tipo_mensagem == 'comando':
         comando = partes[1]
         if comando == 'trancar':
             if Porta['Estado'] == "fechada": 
                 Porta['Trava'] = "trancada"
+                tcp_socket.send(bytes("comando_recebido-trancar-trancada-porta_fechada","utf-8"))
+            else: 
+                 tcp_socket.send(bytes("comando_recebido-trancar-destrancada-porta_aberta","utf-8"))
         elif comando == 'destrancar':
             if Porta['Trava'] == 'trancada': 
                 Porta['Trava'] = "destrancada"
+                tcp_socket.send(bytes("comando_recebido-destrancar-destrancada-porta_fechada","utf-8"))
+            else:
+                tcp_socket.send(bytes("comando_recebido-destrancar-destrancada-porta_fechada","utf-8"))
+        elif comando == 'ligar': 
+            if Porta['Ligar'] == 'false': 
+                Porta['Ligar'] = 'true'
+                tcp_socket.send(bytes("comando_recebido-ligada","utf-8")) 
+            else: 
+                tcp_socket.send(bytes("comando_recebido-ligada","utf-8"))
+        elif comando == 'desligar': 
+            if Porta['Ligar'] == 'true': 
+                Porta['Ligar'] = 'false'
+                tcp_socket.send(bytes("comando_recebido-desligada","utf-8")) 
+            else: 
+                tcp_socket.send(bytes("comando_recebido-desligada","utf-8"))
 
 def receptor_mensagens_menu(mensagem): 
     if mensagem == '0':
@@ -119,17 +140,25 @@ def receptor_mensagens_menu(mensagem):
     elif mensagem == '1':
         if Porta['Trava'] == 'trancada': 
             Porta['Trava'] = "destrancada"
+    elif mensagem == '2':
+        if Porta['Ligar'] == 'false': 
+            Porta['Ligar'] = "true"
+    elif mensagem == '3':
+        if Porta['Ligar'] == 'true': 
+            Porta['Ligar'] = "false"
     
 #Função para controle manual da tranca
 def menu_tranca(): 
     opcao = ""
-    while opcao != "0" and opcao != "1":
+    while opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3':
         print("====Tranca Smart!=====")
         print("[0] Trancar")
-        print("[1] Destrancar")
+        print("[1] Destrancar") 
+        print("[2] Ligar")
+        print("[3] Desligar")
         print("")
         opcao = input("Escolha sua opção: ")  
-        if opcao != "0" and opcao != "1": 
+        if opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3': 
             print("")
             print("Opção inválida por favor insira noavamente ") 
             print("")
@@ -140,12 +169,18 @@ def menu_tranca():
 def envio_informações():
     def enviar(): 
         while True:
-            estado = Porta["Estado"]
-            trava = Porta["Trava"]
-            tempo_aberta = Porta["TempoAberta"]
-            mensagem = f"status-{estado}-{trava}-{tempo_aberta:.2f}-"
-            envio_mensagem_udp(mensagem, SERVER_IP, SERVER_PORT_UDP)
-            time.sleep(2)  
+            if Porta['Ligar'] == 'true':
+                estado = Porta["Estado"]
+                trava = Porta["Trava"]
+                tempo_aberta = Porta["TempoAberta"]
+                mensagem = f"status-{estado}-{trava}-{tempo_aberta:.2f}"
+                envio_mensagem_udp(mensagem, SERVER_IP, SERVER_PORT_UDP)
+                time.sleep(2)  
+            else: 
+                mensagem = f"status- -desligada-0"
+                envio_mensagem_udp(mensagem, SERVER_IP, SERVER_PORT_UDP)
+                time.sleep(2)
+
     thread = threading.Thread(target=enviar)
     thread.start() 
 

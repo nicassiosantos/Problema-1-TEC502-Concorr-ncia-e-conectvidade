@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend</title>
+    <style>
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .device-info {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }  
+
+    </style>
+</head>
+<body>
+    <h1>Serviço de Trancas de Portas</h1>
+    <button onclick="getAndDisplayTcpClients()">Obter Lista de Trancas conectadas</button>
+
+    <div id="devices-container"></div>
+
+    <script>
+        async function getAndDisplayTcpClients() {
+            getTcpClients();
+            setInterval(getTcpClients, 2000); // Atualiza a cada 2 segundos
+        }
+
+        async function getTcpClients() {
+            try {
+                const response = await fetch("http://127.0.0.1:5000/tcp-clients/");
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayDevices(data.devices);
+                } else {
+                    throw new Error(data.message || "Erro desconhecido ao obter a lista de dispositivos.");
+                }
+            } catch (error) {
+                alert("Erro ao fazer a solicitação: " + error.message);
+            }
+        }
+
+        function displayDevices(devices) {
+            const devicesContainer = document.getElementById("devices-container");
+            devicesContainer.innerHTML = ""; // Limpa o conteúdo atual
+            
+            devices.forEach(device => {
+                const deviceInfoElement = document.createElement("div");
+                deviceInfoElement.classList.add("device-info");
+                deviceInfoElement.innerHTML = `
+                    <h3>Tranca:</h3>
+                    <p>IP: ${device.ip}</p>
+                    <p>Porta TCP: ${device.porta_tcp}</p>
+                    <p>Estado Porta: ${device.estado}</p>
+                    <p>Tranca: ${device.trava}</p>
+                    <p>Tempo Aberta: ${device.tempo_aberta}</p>
+                    <button onclick="unlockDevice('${device.ip}', ${device.porta_tcp}, '${device.trava}')">Destrancar</button>
+                    <button onclick="lockDevice('${device.ip}', ${device.porta_tcp}, '${device.trava}')">Trancar</button>
+                    <button onclick="onDevice('${device.ip}', ${device.porta_tcp})">Ligar</button>
+                    <button onclick="offDevice('${device.ip}', ${device.porta_tcp}, '${device.trava}')">Desligar</button>
+                `;
+                devicesContainer.appendChild(deviceInfoElement);
+            });
+        }
+
+        async function unlockDevice(ip, port, trava) {
+            try {
+                if (trava !== 'desligada'){
+                        const message = 'comando_para_dispositivo-' + ip + '-' + port + '-destrancar'
+                        const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                            method: "POST",
+                            headers: {
+                        "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
+                            },
+                            body: JSON.stringify({ message: message })
+                        });
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            alert("Dispositivo destrancado com sucesso.");
+                        } else {
+                            throw new Error(data.message || "Erro desconhecido ao destrancar o dispositivo.");
+                        }
+                } else {
+                    alert("Dispositivo desligado, Ligue antes de mandar um comando")
+                }
+            } catch (error) {
+                alert("Erro ao fazer a solicitação: " + error.message);
+            }
+        }
+
+        async function lockDevice(ip, port, trava) {
+            try {
+                if (trava !== 'desligada'){
+                    const message = 'comando_para_dispositivo-' + ip + '-' + port + '-trancar'
+                    const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                        method: "POST",
+                        headers: {
+                    "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        alert("Dispositivo trancado com sucesso.");
+                    } else {
+                        throw new Error(data.message || "Erro desconhecido ao trancar o dispositivo.");
+                    }
+                }else {
+                        alert("Dispositivo desligado, Ligue antes de mandar um comando")
+                    }
+            } catch (error) {
+                alert("Erro ao fazer a solicitação: " + error.message);
+            }
+        } 
+
+        async function onDevice(ip, port) {
+            try {
+                const message = 'comando_para_dispositivo-' + ip + '-' + port + '-ligar'
+                const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                    method: "POST",
+                    headers: {
+                "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert("Dispositivo ligado com sucesso.");
+                } else {
+                    throw new Error(data.message || "Erro desconhecido ao ligar o dispositivo.");
+                }
+            } catch (error) {
+                alert("Erro ao fazer a solicitação: " + error.message);
+            }
+        }
+
+        async function offDevice(ip, port, trava) {
+            try {
+                if (trava !== 'desligada'){
+                    const message = 'comando_para_dispositivo-' + ip + '-' + port + '-desligar'
+                    const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                        method: "POST",
+                        headers: {
+                    "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        alert("Dispositivo desligado com sucesso.");
+                    } else {
+                        throw new Error(data.message || "Erro desconhecido ao desligar o dispositivo.");
+                    }
+                }
+            } catch (error) {
+                alert("Erro ao fazer a solicitação: " + error.message);
+            }
+        }
+
+    </script>
+</body>
+</html>
