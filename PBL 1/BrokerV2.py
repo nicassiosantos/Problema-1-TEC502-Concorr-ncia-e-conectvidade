@@ -9,6 +9,7 @@ import queue
 app = Flask(__name__)
 CORS(app)
 global msg 
+msg = ''
 
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -78,13 +79,6 @@ def process_udp_messages():
                         dipositivo["tempo_aberta"] = tempo_aberta 
 
 
-
-# Função para aguardar a entrada do teclado
-def wait_for_input():
-    input("Pressione ENTER para fechar o servidor...")
-    print("Encerrando o servidor...")
-    sys.exit()
-
 # Função para processar as mensagens recebidas via HTTP
 def process_http_messages():
     while True:
@@ -99,14 +93,16 @@ def process_http_messages():
             for dispositivo in tcp_clients:
                 if comando == "comando_para_dispositivo":
                     if dispositivo["ip"] == ip_dispositivo and dispositivo["porta_tcp"] ==  porta: 
-                        msg = f"comando-{comando_dispositivo}"
-                        dispositivo["socket"].send(msg.encode())  
-                        Recebimento_mensagem(dispositivo["socket"])
+                        mensagem = f"comando-{comando_dispositivo}"
+                        dispositivo["socket"].send(mensagem.encode())  
+                        msg = Recebimento_mensagem(dispositivo["socket"])
 
 #Função responsável por verificar o recebimento de mensagens de resposta
 def Recebimento_mensagem(socket): 
     try: 
+        global msg 
         msg = socket.recv(1024).decode('utf-8') 
+        return msg
     except Exception as e: 
         print(f"Erro ao processar mensagem TCP: {e}")
         time.sleep(3)
@@ -120,6 +116,7 @@ def send_message():
         # Coloca a mensagem na fila de mensagens HTTP
         http_messages.put(message)
         print("Mensagem recebida via HTTP:", message) 
+        time.sleep(0.5)
         print("Mensagem recebida pelo dispositivo", msg)
         return jsonify({"success": True, "message": "Mensagem enviada com sucesso"}), 200
     except Exception as e:
