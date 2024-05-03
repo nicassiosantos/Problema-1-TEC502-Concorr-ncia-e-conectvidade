@@ -4,6 +4,7 @@ import socket
 import threading 
 import time
 import queue 
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -15,10 +16,10 @@ tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 #Variaveis globais para definir conexões
-SERVER_IP = '127.0.0.1' 
-SERVER_PORT_TCP = 12346
-SERVER_PORT_UDP = 54323 
-HTTP_PORT = 4587 
+SERVER_IP = os.getenv('SERVER_IP', '127.0.0.1') 
+SERVER_PORT_TCP = int(os.getenv('SERVER_PORT_TCP', '12346'))
+SERVER_PORT_UDP = int(os.getenv('SERVER_PORT_UDP', '54323'))
+HTTP_PORT = int(os.getenv('HTTP_PORT', '4587'))
 
 # Dicionários para armazenar os IPs dos dispositivos conectados
 tcp_clients = []

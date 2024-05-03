@@ -2,12 +2,11 @@ import socket
 import threading 
 import time 
 import random 
+import os
 
-SERVER_IP = '127.0.0.1'
-SERVER_PORT_TCP = 12346
-SERVER_PORT_UDP = 54323
-
-
+SERVER_IP = os.getenv('SERVER_IP', '127.0.0.1')
+SERVER_PORT_TCP = int(os.getenv('SERVER_PORT_TCP', '12346'))
+SERVER_PORT_UDP = int(os.getenv('SERVER_PORT_UDP', '54323'))
 
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
