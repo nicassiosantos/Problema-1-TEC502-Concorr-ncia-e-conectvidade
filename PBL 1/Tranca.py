@@ -4,11 +4,11 @@ import time
 import random 
 
 SERVER_IP = '127.0.0.1'
-SERVER_PORT_TCP = 12345
-SERVER_PORT_UDP = 54321
-HEADERSIZE = 10
+SERVER_PORT_TCP = 12346
+SERVER_PORT_UDP = 54323
 
-ligar = False 
+
+
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -27,6 +27,7 @@ def tente_conectar_broker_tcp(server_ip, server_port_tcp):
             global tcp_socket
             tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             tcp_socket.connect((server_ip, server_port_tcp)) 
+            tcp_socket.settimeout(15)
             print("Sucesso ao conectar") 
             break
         except socket.error as e:
@@ -35,7 +36,9 @@ def tente_conectar_broker_tcp(server_ip, server_port_tcp):
                 time.sleep(3)
                 print("Tentando Reconexão...")
             else:
-                print(f"Falha ao conectar ao servidor via TCP: {e}")  
+                print("O Servidor ainda não está no ar")
+                time.sleep(3)
+                print("Tentando Reconexão...")  
 
 #Funcao responsavel por enviar uma mensagem via udp
 def envio_mensagem_udp(mensagem, server_ip, server_port_udp): 
@@ -52,7 +55,6 @@ def tratando_mensagens_tcp():
             mensagem = tcp_socket.recv(1024).decode('utf-8')
             if not mensagem:
                 break
-            print(f"Mensagem TCP recebida: {mensagem}")
             partes = mensagem.split('-')
             receptor_mensagens(partes)
         except ConnectionResetError:
@@ -60,6 +62,7 @@ def tratando_mensagens_tcp():
             tente_conectar_broker_tcp(SERVER_IP, SERVER_PORT_TCP)
         except Exception as e:
             print(f"Erro ao processar mensagem TCP: {e}")
+            tente_conectar_broker_tcp(SERVER_IP, SERVER_PORT_TCP)
             time.sleep(3) 
 
 
@@ -69,17 +72,15 @@ def simular_porta():
     def simular():
         while True:
             if Porta['Ligar'] == 'true':
-                print(f"Estado Trava: {Porta['Trava']}")
                 if Porta['Trava'] == 'destrancada': 
                     Porta['Estado'] = random.choice(["aberta", "fechada"])
-                print(f"A porta está {Porta['Estado']}.")
-                print(f"Tempo aberta: {Porta['TempoAberta']}")
                 time.sleep(random.uniform(4, 8))  # Tempo aleatório antes de alterar o estado da porta
     thread = threading.Thread(target=simular)
+    thread.daemon = True
     thread.start() 
 
 
-#Função responsavél por aleatorizar o estado da porta em que momento ela abre 
+#Função responsavél por verificar e fazer a contagem do tempo da porta no momento que ela é aberta 
 def observar_porta():
     def monitorar():
         inicio_contagem = 0
@@ -101,6 +102,7 @@ def observar_porta():
                         time.sleep(1)  # Verifica a cada segundo 
                     inicio_contagem = 0
     thread = threading.Thread(target=monitorar)
+    thread.daemon = True
     thread.start()
 
 #Função responsavél por tratar mensagens que chegam a Tranca e mandar uma resposta de acordo 
@@ -111,28 +113,29 @@ def receptor_mensagens(partes):
         if comando == 'trancar':
             if Porta['Estado'] == "fechada": 
                 Porta['Trava'] = "trancada"
-                tcp_socket.send(bytes("comando_recebido-trancar-trancada-porta_fechada","utf-8"))
+                tcp_socket.send(bytes(f"comando_recebido-trancar-trancada-{Porta['Estado']}","utf-8"))
             else: 
-                 tcp_socket.send(bytes("comando_recebido-trancar-destrancada-porta_aberta","utf-8"))
+                 tcp_socket.send(bytes(f"comando_recebido-trancar-destrancada-{Porta['Estado']}","utf-8"))
         elif comando == 'destrancar':
             if Porta['Trava'] == 'trancada': 
                 Porta['Trava'] = "destrancada"
-                tcp_socket.send(bytes("comando_recebido-destrancar-destrancada-porta_fechada","utf-8"))
+                tcp_socket.send(bytes(f"comando_recebido-destrancar-destrancada-{Porta['Estado']}","utf-8"))
             else:
-                tcp_socket.send(bytes("comando_recebido-destrancar-destrancada-porta_fechada","utf-8"))
+                tcp_socket.send(bytes("comando_recebido-destrancar-destrancada-","utf-8"))
         elif comando == 'ligar': 
             if Porta['Ligar'] == 'false': 
                 Porta['Ligar'] = 'true'
-                tcp_socket.send(bytes("comando_recebido-ligada","utf-8")) 
+                tcp_socket.send(bytes(f"comando_recebido-ligar-ligada-{Porta['Estado']}","utf-8")) 
             else: 
-                tcp_socket.send(bytes("comando_recebido-ligada","utf-8"))
+                tcp_socket.send(bytes(f"comando_recebido-ligar-ligada-{Porta['Estado']}","utf-8"))
         elif comando == 'desligar': 
             if Porta['Ligar'] == 'true': 
                 Porta['Ligar'] = 'false'
-                tcp_socket.send(bytes("comando_recebido-desligada","utf-8")) 
+                tcp_socket.send(bytes(f"comando_recebido-desligar-ligada-{Porta['Estado']}","utf-8")) 
             else: 
-                tcp_socket.send(bytes("comando_recebido-desligada","utf-8"))
+                tcp_socket.send(bytes(f"comando_recebido-desligar-desligada-{Porta['Estado']}","utf-8"))
 
+#Função responsável por tratar as mensagens vindas do menu de controle manual do dispositivo
 def receptor_mensagens_menu(mensagem): 
     if mensagem == '0':
         if Porta['Estado'] == "fechada": 
@@ -147,7 +150,7 @@ def receptor_mensagens_menu(mensagem):
         if Porta['Ligar'] == 'true': 
             Porta['Ligar'] = "false"
     
-#Função para controle manual da tranca
+#Função do menu para controle manual da tranca
 def menu_tranca(): 
     opcao = ""
     while opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3':
@@ -165,7 +168,7 @@ def menu_tranca():
             time.sleep(1)
     receptor_mensagens_menu(opcao)
 
-#Função que vai enviar informações do dispositivo para o broker 
+#Função que envia informações do dispositivo para o broker a cada dois segundos
 def envio_informações():
     def enviar(): 
         while True:
@@ -182,6 +185,7 @@ def envio_informações():
                 time.sleep(2)
 
     thread = threading.Thread(target=enviar)
+    thread.daemon = True
     thread.start() 
 
 def main():
@@ -191,19 +195,23 @@ def main():
 
         # Cria e inicia a thread para recebimento de mensagens
         receive_thread = threading.Thread(target=tratando_mensagens_tcp, args=())
+        receive_thread.daemon = True
         receive_thread.start()
 
+        #Cria e inicia a thread que observa o estado da porta 
         observar_porta()
+
+        #Cria e inicia a thread que aleatoriza o estado da porta para aberta e fechada
         simular_porta()
+
+        #Cria e inicia a thread para enviar os dados do dispositvos para 
         envio_informações()
 
         while True:
             try:
+                #Menu para controle manual da tranca 
                 menu_tranca()
-                pass
-            except KeyboardInterrupt:
-                print("Encerrando o programa...")
-                # Ao detectar um sinal de interrupção (Ctrl+C), encerra as threads e fecha o socket
+            except Exception as e:
                 tcp_socket.close()
                 udp_socket.close()
                 break

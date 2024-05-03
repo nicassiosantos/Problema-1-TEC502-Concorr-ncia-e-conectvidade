@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend</title>
+    <title>Aplicação</title>
     <style>
         button {
             margin: 5px;
@@ -15,7 +15,6 @@
             padding: 10px;
             border: 1px solid #ccc;
         }  
-
     </style>
 </head>
 <body>
@@ -25,6 +24,10 @@
     <div id="devices-container"></div>
 
     <script>
+        // Definindo variáveis globais para a URL e a porta das rotas
+        const BASE_URL = "http://127.0.0.1";
+        const PORT = 4587;
+
         async function getAndDisplayTcpClients() {
             getTcpClients();
             setInterval(getTcpClients, 2000); // Atualiza a cada 2 segundos
@@ -32,7 +35,7 @@
 
         async function getTcpClients() {
             try {
-                const response = await fetch("http://127.0.0.1:5000/tcp-clients/");
+                const response = await fetch(`${BASE_URL}:${PORT}/tcp-clients/`);
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -41,7 +44,7 @@
                     throw new Error(data.message || "Erro desconhecido ao obter a lista de dispositivos.");
                 }
             } catch (error) {
-                alert("Erro ao fazer a solicitação: " + error.message);
+                displayDevices([]);
             }
         }
 
@@ -72,7 +75,7 @@
             try {
                 if (trava !== 'desligada'){
                         const message = 'comando_para_dispositivo-' + ip + '-' + port + '-destrancar'
-                        const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                        const response = await fetch(`${BASE_URL}:${PORT}/send-message/`, {
                             method: "POST",
                             headers: {
                         "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
@@ -98,7 +101,7 @@
             try {
                 if (trava !== 'desligada'){
                     const message = 'comando_para_dispositivo-' + ip + '-' + port + '-trancar'
-                    const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                    const response = await fetch(`${BASE_URL}:${PORT}/send-message/`, {
                         method: "POST",
                         headers: {
                     "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
@@ -123,7 +126,7 @@
         async function onDevice(ip, port) {
             try {
                 const message = 'comando_para_dispositivo-' + ip + '-' + port + '-ligar'
-                const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                const response = await fetch(`${BASE_URL}:${PORT}/send-message/`, {
                     method: "POST",
                     headers: {
                 "Content-Type": "application/json" // Definindo o cabeçalho Content-Type
@@ -146,7 +149,7 @@
             try {
                 if (trava !== 'desligada'){
                     const message = 'comando_para_dispositivo-' + ip + '-' + port + '-desligar'
-                    const response = await fetch("http://127.0.0.1:5000/send-message/", {
+                    const response = await fetch(`${BASE_URL}:${PORT}/send-message/`, {
                         method: "POST",
                         headers: {
                     "Content-Type": "application/json" // Definindo o cabeçalho Content-Type

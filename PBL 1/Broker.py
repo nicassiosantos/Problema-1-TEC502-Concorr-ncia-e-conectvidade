@@ -1,22 +1,24 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import socket
-import threading
-import sys 
+import threading 
 import time
 import queue 
 
 app = Flask(__name__)
 CORS(app)
+
 global msg 
 msg = ''
 
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-SERVER_IP = '172.16.103.7' 
+#Variaveis globais para definir conexões
+SERVER_IP = '127.0.0.1' 
 SERVER_PORT_TCP = 12346
 SERVER_PORT_UDP = 54323 
+HTTP_PORT = 4587 
 
 # Dicionários para armazenar os IPs dos dispositivos conectados
 tcp_clients = []
@@ -26,19 +28,17 @@ HEADERSIZE = 10
 udp_message_queue = queue.Queue()
 http_messages = queue.Queue()
 
-# Função para lidar com conexões TCP
+# Função para registrar os dispositivos que se conectaram via tcp
 def Registrando_dispositivos_TCP(client_socket, address): 
     print(f"Conexão TCP estabelecida com {address}")
     dispositivo = {"socket": client_socket, "ip": address[0],  "porta_tcp": address[1], "estado": "", "trava": "desligada", "tempo_aberta": "0"}
     tcp_clients.append(dispositivo)
-    print("Clientes TCP:", tcp_clients) 
 
 # Função para verificar a conexão dos dispositivos TCP
 def verificar_conexao_dispositivos():
     while True:
         for dispositivo in tcp_clients:
             try:
-                print(f"Tentando verificar conexão com {dispositivo['ip']}:{dispositivo['porta_tcp']}...")
                 # Enviar uma mensagem de verificação para o dispositivo
                 dispositivo['socket'].send(bytes("Verificando",'utf-8'))
             except Exception as e:
@@ -48,11 +48,10 @@ def verificar_conexao_dispositivos():
                 print("Clientes TCP atualizados:", tcp_clients)
         
         # Aguardar um tempo antes da próxima verificação
-        time.sleep(8)  # Verificar a conexão a cada 60 segundos 
+        time.sleep(10)  # Verificar a conexão a cada 10 segundos 
 
 # Função para armazenar as mensagens que chegam via udp em uma fila
 def handle_udp_connection(udp_socket):
-    print("Aguardando mensagens UDP...")
     while True:
         data, address = udp_socket.recvfrom(1024)
         # Coloca a mensagem na fila
@@ -65,7 +64,6 @@ def process_udp_messages():
             # Obtém a mensagem e o endereço da fila
             message, address = udp_message_queue.get()
             # Processa a mensagem como desejado
-            #print(f"Processando mensagem UDP de {address}: {message}")
             partes = message.split('-') 
             tipo = partes[0] 
             estado = partes[1] 
@@ -83,8 +81,7 @@ def process_udp_messages():
 def process_http_messages():
     while True:
         if not http_messages.empty():
-            message = http_messages.get()
-            partes = message.split("-")
+            partes = http_messages.get()
             comando = partes[0] 
             ip_dispositivo = partes[1] 
             porta = int(partes[2]) 
@@ -93,11 +90,12 @@ def process_http_messages():
             for dispositivo in tcp_clients:
                 if comando == "comando_para_dispositivo":
                     if dispositivo["ip"] == ip_dispositivo and dispositivo["porta_tcp"] ==  porta: 
+                        #Estrututura do protocolo de mensagens de comando que são enviadas para o dispositivo via TCP
                         mensagem = f"comando-{comando_dispositivo}"
                         dispositivo["socket"].send(mensagem.encode())  
                         msg = Recebimento_mensagem(dispositivo["socket"])
 
-#Função responsável por verificar o recebimento de mensagens de resposta
+#Função responsável por verificar o recebimento de mensagens de resposta do dispositivo
 def Recebimento_mensagem(socket): 
     try: 
         global msg 
@@ -107,22 +105,39 @@ def Recebimento_mensagem(socket):
         print(f"Erro ao processar mensagem TCP: {e}")
         time.sleep(3)
 
-# Função para armazenar as mensagens recebidas via HTTP
+# Rota para enviar as mensagens recebidas para o dispositivo alvo
 @app.route("/send-message/", methods=["POST"])
 def send_message():
     try:
         data = request.json
         message = data.get("message")
+        partes1 = message.split("-")
         # Coloca a mensagem na fila de mensagens HTTP
-        http_messages.put(message)
-        print("Mensagem recebida via HTTP:", message) 
+        http_messages.put(partes1)
         time.sleep(0.5)
-        print("Mensagem recebida pelo dispositivo", msg)
-        return jsonify({"success": True, "message": "Mensagem enviada com sucesso"}), 200
+        partes2 = msg.split("-")
+
+        #Estrututura do protocolo de mensagens que chegam da Aplicação via HTTP
+        tipo_comando_http = partes1[0] 
+        ip_dispositivo = partes1[1]
+        porta_dispositivo = partes1[2]
+        comando_para_dispositivo = partes1[3] 
+
+        #Estrututura do protocolo de mensagens de resposta que chegam do dispositivo via TCP
+        tipo_comando_resposta = partes2[0] 
+        comando_enviado = partes2[1]
+        estado_atual_parte = partes2[2]
+        estado_atual_porta = partes2[3]
+
+        if(tipo_comando_http == "comando_para_dispositivo"): 
+            if( comando_para_dispositivo == "trancar") and (estado_atual_porta == "aberta"):
+                return jsonify({"sucess": False, "message": "A porta foi ou estava aberta quando o comando para ser trancada foi recebido "}), 500
+            else: 
+                return jsonify({"success": True, "message": "Mensagem enviada com sucesso"}), 200
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"sucess": False, "message": str(e)}), 500
     
-# Função para obter a lista de dispositivos TCP
+# Rota para obter a lista de dispositivos TCP conectados ao broker
 @app.route("/tcp-clients/", methods=["GET"])
 def get_tcp_clients():
     try:
@@ -141,20 +156,19 @@ def get_tcp_clients():
         return jsonify({"success": True, "devices": devices_info}), 200
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-    
+
+#Função para iniciar utilizar as portas HTTP
 def start_flask_server():
-    app.run(host=SERVER_IP, port=4587)
+    app.run(host=SERVER_IP, port=HTTP_PORT)
 
 def main():
     try:
         # Configuração do socket TCP
         tcp_socket.bind((SERVER_IP, SERVER_PORT_TCP))
         tcp_socket.listen(5)
-        print("Servidor TCP aguardando conexões...")
 
         # Configuração do socket UDP
         udp_socket.bind((SERVER_IP, SERVER_PORT_UDP))
-        print("Servidor UDP aguardando mensagens...")
 
         #Inicia uma thread para armazenar as mensagens Udp em uma Fila
         udp_thread = threading.Thread(target=handle_udp_connection, args=(udp_socket,))
@@ -185,5 +199,6 @@ def main():
          print(f"Erro durante a execução do servidor: {e}")
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=start_flask_server)
+    flask_thread.daemon = True
     flask_thread.start()
     main()
