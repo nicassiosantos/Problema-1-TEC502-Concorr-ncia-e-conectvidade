@@ -1,6 +1,6 @@
 # Problema-1-Internet das coisas
 
-# Sistema de Controle de Trancas de Portas
+## Sistema de Controle de Trancas de Portas
 
 Este é um sistema que permite controlar trancas de portas remotamente por meio de um broker central. Consiste em três componentes principais:
 
