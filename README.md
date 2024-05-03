@@ -31,6 +31,13 @@ Este é um sistema que permite controlar trancas de portas remotamente por meio 
 
 ### 1° Passo. Iniciar o Broker:
 
+- Instale as bibliotecas necessárias através dos comandos 
+
+p align="center">
+  <img src="img\pipsBro.png" alt="app_ft1">
+</p>
+<p align="center">Bibliotecas  Broker.</p>
+
 - Execute o código do broker em um ambiente compatível com Python.
 - Certifique-se de que o broker esteja configurado com o endereço IP e as portas corretas para aguardar conexões de dispositivos e clientes.
 
