@@ -18,13 +18,14 @@ Este é um sistema que permite controlar trancas de portas remotamente por meio 
    - Quando um dispositivo ou cliente se conecta, o broker gerencia a comunicação entre eles, encaminhando mensagens conforme necessário.
 
 2. **Dispositivo de Tranca de Porta**:
-   - O dispositivo de tranca de porta é simulado por meio de software e pode ser executado em um computador, Ele simula uma tranca virtual, que está atrelada a uma porta que está constantemente sendo fechada e aberta de tempos e tempos.
+   - O dispositivo de tranca de porta é simulado por meio de software e pode ser executado em um computador, ele simula uma tranca virtual, que está atrelada a uma porta que está constantemente sendo fechada e aberta de tempos e tempos.
    - Também conta o tempo que a porta está aberta desde do momento em que foi aberta.
    - Ele se conecta ao broker por meio de uma conexão TCP para receber comandos de controle e enviar comandos de resposta, e utiliza uma conexão UDP para enviar atualizações sobre o dados presentes no dispositivo.
    - O dispositivo de tranca de porta também pode ser controlado manualmente por meio de um menu de controle local.
 
 3. **Cliente**:
    - O cliente é uma interface web acessível por meio de um navegador.
+   - Se comunica com o broker via HTTP
    - Permite aos usuários visualizar a lista de trancas de portas conectadas e enviar comandos para essas trancas, como destrancar, trancar, ligar e desligar.
 
 ## Como Utilizar os Produtos
