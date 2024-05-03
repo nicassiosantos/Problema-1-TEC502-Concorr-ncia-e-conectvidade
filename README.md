@@ -72,7 +72,7 @@ Este é um sistema que permite controlar trancas de portas remotamente por meio 
 - Use os botões na interface do cliente para interagir com as trancas de portas conectadas, como destrancar, trancar, ligar e desligar.
 - Clique no botão "Obter Lista de Trancas Conectadas" Para ver as trancas
 <p align="center">
-  <img src="img\telaAp.png" alt="app_ft1">
+  <img src="img\telaAP.png" alt="app_ft1">
 </p>
 <p align="center">Interface Aplicação</p> 
 
