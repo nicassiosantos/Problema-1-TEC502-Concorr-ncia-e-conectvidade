@@ -34,6 +34,7 @@ Este é um sistema que permite controlar trancas de portas remotamente por meio 
 
 - Instale as bibliotecas necessárias através dos comandos 
 
+<p align="center">
   <img src="img\pipsBro.png" alt="app_ft1">
 </p>
 <p align="center">Bibliotecas  Broker.</p>
