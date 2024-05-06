@@ -133,38 +133,99 @@ def receptor_mensagens(partes):
                 tcp_socket.send(bytes(f"comando_recebido-desligar-ligada-{Porta['Estado']}","utf-8")) 
             else: 
                 tcp_socket.send(bytes(f"comando_recebido-desligar-desligada-{Porta['Estado']}","utf-8"))
+    elif tipo_mensagem == "verificando": 
+        tcp_socket.send(bytes(f"online","utf-8"))
 
 #Função responsável por tratar as mensagens vindas do menu de controle manual do dispositivo
 def receptor_mensagens_menu(mensagem): 
     if mensagem == '0':
-        if Porta['Estado'] == "fechada": 
+        if Porta['Estado'] == "fechada" and Porta['Ligar'] == "true": 
             Porta['Trava'] = "trancada"
+            print("Porta Trancada!") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear')
+        elif Porta['Ligar'] == "false": 
+            print("A Tranca está desligada, Ligue antes de utilizar a tranca") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear') 
+        elif Porta['Estado'] == "aberta" and Porta['Ligar'] == "true": 
+            print("A Porta está aberta, espere fechar antes de tranca-la") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear')
     elif mensagem == '1':
-        if Porta['Trava'] == 'trancada': 
+        if Porta['Trava'] == 'trancada' and Porta['Ligar'] == "true": 
             Porta['Trava'] = "destrancada"
+            print("Porta Destrancada!") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear')
+        elif Porta['Ligar'] == "false": 
+            print("A Tranca está desligada, Ligue antes de utilizar a tranca") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear') 
     elif mensagem == '2':
         if Porta['Ligar'] == 'false': 
             Porta['Ligar'] = "true"
+            print("Tranca ligada!") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear')
     elif mensagem == '3':
         if Porta['Ligar'] == 'true': 
             Porta['Ligar'] = "false"
+            print("Tranca desligada!") 
+            time.sleep(1) 
+            if os.name == 'nt':  # Windows
+                os.system('cls')
+            else:  # Unix/Linux/MacOS
+                os.system('clear')
     
 #Função do menu para controle manual da tranca
 def menu_tranca(): 
     opcao = ""
-    while opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3':
-        print("====Tranca Smart!=====")
+    while opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3' and opcao != '4':
+        print("====Tranca Smart!=====") 
+        print("Últimas informações da Tranca:") 
+        if(Porta['Ligar'] == "false"): 
+            print("Estado: desligada |", end="")
+        else: 
+            print("Estado: ligada |", end="") 
+        print(f"Trava: {Porta['Trava']} |", end = "")
+        print(f"Tempo aberta: {Porta['TempoAberta']:.2f} |", end = "")
+        print(f"Porta: {Porta['Estado']} |")
+        print("Comandos:")
         print("[0] Trancar")
         print("[1] Destrancar") 
         print("[2] Ligar")
         print("[3] Desligar")
+        print("[4] Atualizar informações")
         print("")
         opcao = input("Escolha sua opção: ")  
-        if opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3': 
+        if opcao != "0" and opcao != "1" and opcao != '2' and opcao != '3' and opcao != '4': 
             print("")
-            print("Opção inválida por favor insira noavamente ") 
+            print("Opção inválida por favor insira novamente ") 
             print("")
             time.sleep(1)
+        if os.name == 'nt':  # Windows
+            os.system('cls')
+        else:  # Unix/Linux/MacOS
+            os.system('clear')
     receptor_mensagens_menu(opcao)
 
 #Função que envia informações do dispositivo para o broker a cada dois segundos

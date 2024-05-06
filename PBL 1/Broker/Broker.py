@@ -23,7 +23,6 @@ HTTP_PORT = int(os.getenv('HTTP_PORT', '4587'))
 
 # Dicionários para armazenar os IPs dos dispositivos conectados
 tcp_clients = []
-HEADERSIZE = 10
 
 # Fila para armazenar mensagens UDP
 udp_message_queue = queue.Queue()
@@ -41,15 +40,17 @@ def verificar_conexao_dispositivos():
         for dispositivo in tcp_clients:
             try:
                 # Enviar uma mensagem de verificação para o dispositivo
-                dispositivo['socket'].send(bytes("Verificando",'utf-8'))
+                dispositivo['socket'].send(bytes("verificando",'utf-8'))
+                mensagem = dispositivo['socket'].recv(1024).decode('utf-8')  
+                if mensagem != "online": 
+                    tcp_clients.remove(dispositivo)
             except Exception as e:
                 print(f"Erro: {e}")
                 print(f"Conexão perdida com {dispositivo['ip']}:{dispositivo['porta_tcp']}")
                 tcp_clients.remove(dispositivo)
                 print("Clientes TCP atualizados:", tcp_clients)
-        
         # Aguardar um tempo antes da próxima verificação
-        time.sleep(10)  # Verificar a conexão a cada 10 segundos 
+        time.sleep(8)  # Verificar a conexão a cada 8 segundos 
 
 # Função para armazenar as mensagens que chegam via udp em uma fila
 def handle_udp_connection(udp_socket):
