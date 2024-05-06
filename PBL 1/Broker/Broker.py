@@ -32,6 +32,7 @@ http_messages = queue.Queue()
 def Registrando_dispositivos_TCP(client_socket, address): 
     print(f"Conexão TCP estabelecida com {address}")
     dispositivo = {"socket": client_socket, "ip": address[0],  "porta_tcp": address[1], "estado": "", "trava": "desligada", "tempo_aberta": "0"}
+    dispositivo["socket"].settimeout(10)
     tcp_clients.append(dispositivo)
 
 # Função para verificar a conexão dos dispositivos TCP
@@ -43,6 +44,8 @@ def verificar_conexao_dispositivos():
                 dispositivo['socket'].send(bytes("verificando",'utf-8'))
                 mensagem = dispositivo['socket'].recv(1024).decode('utf-8')  
                 if mensagem != "online": 
+                    tcp_clients.remove(dispositivo)
+                elif not(mensagem): 
                     tcp_clients.remove(dispositivo)
             except Exception as e:
                 print(f"Erro: {e}")
