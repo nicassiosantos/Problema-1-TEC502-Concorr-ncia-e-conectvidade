@@ -28,6 +28,7 @@ def tente_conectar_broker_tcp(server_ip, server_port_tcp):
             tcp_socket.connect((server_ip, server_port_tcp)) 
             tcp_socket.settimeout(15)
             print("Sucesso ao conectar") 
+            print("Pressione Enter para ver o Menu") 
             break
         except socket.error as e:
             if hasattr(e, 'winerror') and e.winerror == 10061:
@@ -45,7 +46,7 @@ def envio_mensagem_udp(mensagem, server_ip, server_port_udp):
         #Tenta enviar mensagem ao servidor via UDP
         udp_socket.sendto(mensagem.encode(), (server_ip, server_port_udp)) 
     except socket.error as e:
-        print(f"Falha ao enviar mensagem via UDP: {e}") 
+        pass
 
 #Função responsavél por receber mensagens do servidor
 def tratando_mensagens_tcp(): 
