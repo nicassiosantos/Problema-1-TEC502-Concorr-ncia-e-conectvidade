@@ -34,7 +34,7 @@ Este é um sistema que permite controlar trancas de portas remotamente por meio 
 
 Primeiro clone o repositório através do comando: 
 
-  git@github.com:nicassiosantos/Problema-1-TEC502-Concorrencia-e-conectvidade.git
+  ```git@github.com:nicassiosantos/Problema-1-TEC502-Concorrencia-e-conectvidade.git```
 
 Após isso, vá até as pastas espcificas e siga as instruções
 
@@ -101,11 +101,11 @@ Após isso, vá até as pastas espcificas e siga as instruções
 
 - O primeiro passo é obter a imagem do broker do docker hub através do comando:
 
-  docker pull antnicassio/redes-broker 
+  ```docker pull antnicassio/redes-broker```
 
 - Para inicializa-lo utilize o comando:  
 
-  docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp -e HTTP_PORT=porta_http  antnicassio/redes-broker
+  ```docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp -e HTTP_PORT=porta_http  antnicassio/redes-broker```
 
 - Substitua o ip, pelo valor do ip da máquina que o broker irá rodar, e substitua porta_tcp, porta_udp e porta_http pelos valores desejados
 
@@ -113,11 +113,11 @@ Após isso, vá até as pastas espcificas e siga as instruções
 
 - O primeiro passo é o mesmo do broker com a diferença do nome:
 
-  docker pull antnicassio/redes-broker 
+  ```docker pull antnicassio/redes-broker``` 
 
 - Para inicializa-lo utilize o comando:
 
-  docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp antnicassio/redes-device
+  ```docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp antnicassio/redes-device```
 
 - os valores de ip, porta_tcp e porta_udp devem ser os mesmos atribuidos ao broker 
 
