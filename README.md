@@ -79,7 +79,7 @@ Após isso, vá até as pastas espcificas e siga as instruções
 #### 3. Acessando a interface:
 
 - Abra o arquivo HTML do cliente em um navegador da web.
-- Certifique-se de que o cliente esteja configurado com o endereço IP e a porta correta do broker para enviar comandos. 
+- Certifique-se de que o cliente esteja configurado com o endereço IP e a porta http do broker para enviar comandos. 
 <p align="center">
   <img src="img\VarAp.png" alt="app_ft1">
 </p>
