@@ -117,7 +117,7 @@ Após isso, vá até as pastas espcificas e siga as instruções
 
 - Para inicializa-lo utilize o comando:
 
-  ```docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp antnicassio/redes-device```
+  ```docker run --network=host -it -e SERVER_IP=ip -e SERVER_PORT_TCP=porta_tcp -e SERVER_PORT_UDP=porta_udp antnicassio/redes-device1```
 
 - os valores de ip, porta_tcp e porta_udp devem ser os mesmos atribuidos ao broker 
 
